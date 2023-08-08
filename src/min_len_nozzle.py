@@ -109,11 +109,6 @@ def initialize_points(n_points: int) -> list['CharPoint']:
     # Again loop over everything to find centerline points. Here, the range begins at 0 since list
     # indexing is being performed and the internal idx attributes are not being changed / accessed
     for i in range(0, n_points):
-        # By definition, the flow angle on the centerline is zero. In Modern Compressible Flow by
-        # Anderson, the first point is selected to have a small non-zero flow angle, but I tested
-        # this and it had no change on the final exit Mach number. I therefore chose to stick with
-        # the more intuitive reasoning that all centerline points have a flow angle of 0
-
         # The first point is placed on the centerline by definition, so its state is changed
         # accordingly
         if char_pts[i].idx == 1:
@@ -305,7 +300,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     char_pts[0].mach_ang = mach_angle(char_pts[0].mach_num)
 
     # The slope of the characteristic line coming in to point 1 relative to the centerline is the
-    # mach angle minus the flow angle
+    # Mach angle minus the flow angle
 
     # Using x = y / tan(angle) the position of the first point can be found
     char_pts[0].xy_loc = [RAD_THROAT / (np.tan(char_pts[0].mach_ang - char_pts[0].flow_ang)), 0]
@@ -325,6 +320,10 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             # Because this loop starts at point 2 instead of point 1, directly indexing the angle
             # divisions array would use the previous angle value instead of the current one because
             # point 1 uses the index i = 1 instead of i = 0
+
+            # For example, say point 1 has a flow angle set to 0.2, then point 2 needs to start
+            # with a flow angle of 0.4 instead of 0.2, otherwise points 1 and 2 would have the same
+            # flow angle - which would be incorrect
 
             # Therefore, one angle increment needs to be added to the angle of these points to
             # compensate for this difference
@@ -376,7 +375,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     for i in range(N_LINES + 1, n_points):
         # Previous point
         prv_pt = i - 1
-        # Previous point physically above the current point (y_prev > y_curr, x_prev < x_curr)
+        # Previous point vertically above the current point (y_prev > y_curr, x_prev < x_curr)
         top_pt = i - (N_LINES - j)
         # Previous point that lies on the centerline (only used for centerline point calculations)
         cnt_pt = i - (N_LINES - j) - 1
@@ -472,9 +471,9 @@ def plotting(wall_data: tuple[list[float], list[float]],
     Args:
         wall_data (tuple[list[float], list[float]]): (x, y) coordinates for points on the wall
         char_data (tuple[list[float], list[float]]): (x, y) coordinates for all other points
-        exit_mach (float): actual exit Mach number calculated using MOC
-        area_ratio (float): area ratio A/A* of the final nozzle design4
-        ideal_ar_ratio (float): area ratio A/A* for ideal isentropic choked flow at the throat
+        calcd_area_ratio (float): calculated area ratio using throat radius and final y coordinate
+        ideal_area_ratio (float): ideal area ratio calculated using isentropic relations
+        percent_error (float): % error between the calculated and ideal area ratios
     '''
 
     # Colors for internal points
@@ -509,7 +508,7 @@ def plotting(wall_data: tuple[list[float], list[float]],
 
 def data_output(x_data: list[float], y_data: list[float]):
     '''
-    Generates a .csv file of the upper wall data for use in external programs.
+    Generates a .csv file containing the upper wall data for use in external programs.
 
     Args:
         x_data (list[float]): x coordinates for points on the wall
@@ -588,12 +587,14 @@ def main():
 
     # Area ratio of the final nozzle design, A/A*
 
-    # Since this nozzle design is quasi-one dimensional, the ratio between the height of the last
+    # Since this nozzle design is two-dimensional, the ratio between the height of the last
     # wall point and the nozzle throat radius can be used as the area ratio
     calcd_area_ratio = char_pts[-1].xy_loc[1] / RAD_THROAT
+
     # Ideal area ratio using isentropic relations
     ideal_area_ratio = (0.5 * (GAMMA + 1))**(-(GAMMA + 1) / (2 * (GAMMA - 1))) * (1/MACH_E) * \
                        (1 + 0.5 * (GAMMA - 1) * MACH_E**2)**((GAMMA + 1) / (2 * (GAMMA - 1)))
+
     # Percent difference in area ratios
     percent_error = 100 * np.abs(ideal_area_ratio - calcd_area_ratio) / \
                    (0.5 * (ideal_area_ratio + calcd_area_ratio))

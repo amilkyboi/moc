@@ -10,9 +10,12 @@ def newton_raphson(func, dfunc, root: float, n_max: int=100, tol: float=1e-11) -
     '''
 
     i = 0
+
     for i in range(n_max):
         change = func(root)/dfunc(root)
         root -= change
+
         if abs(change) < tol:
             break
+
     return root, i
