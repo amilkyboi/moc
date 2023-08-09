@@ -1,4 +1,4 @@
-# module axisymm_nozzle
+# module axisym_nozzle
 '''
 Axisymmetric supersonic nozzle design using the 2-D method of characteristics.
 '''
