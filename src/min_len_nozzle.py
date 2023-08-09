@@ -30,6 +30,31 @@ import numpy as np
 
 from newton_raphson import newton_raphson
 
+# NOTE: There's some really interesting wonky stuff going on here. If I change the angle division
+#       to angle / (N_LINES - 1), set the flow_ang of point 1 to be zero, and remove the d_angle
+#       addition from the first characteristic line pair, the solution becomes much more accurate
+
+#       Right now, I'm basically saying that the flow angle of point 1 is set to d_angle, which is
+#       a pretty bad assumption when the number of lines is small. The assumption becomes relatively
+#       decent at higher numbers of lines, but it still isn't great.
+
+#       The new system is essentially saying that the flow angle at point 1 is always 0, but the PM
+#       angle there can't be zero, so some small number needs to be chosen for that no matter what.
+#       This is of course because if the PM angle was zero, the Mach number at point 1 would be 1
+#       and it would fall on the sonic line, which is no good.
+
+#       The problem with the new method would be that the positive Riemann invariant at point 1
+#       would not match with the rest of the points along the first characteristic line pair.
+
+#       I've checked out two other MOC solvers written in MATLAB to check my answers, and the code
+#       as-is now agrees with those two solvers almost exactly. They seem to be using the same
+#       method for getting the initial flow angle at point 1, that is just setting it as the angle
+#       division.
+
+#       Additionally, with the new method the geometry of the first characteristic line pair just
+#       looks strange, and the first wall point is placed very close to the second. Of course, this
+#       doesn't mean that the algorithm is wrong, but it is something that I've noticed.
+
 # Global design parameters
 GAMMA:      float = 1.4
 MACH_E:     float = 2.4
@@ -43,7 +68,7 @@ METHOD: str = 'newton'
 INFO: bool = False
 
 # Save upper wall data to .csv
-SAVE: bool = True
+SAVE: bool = False
 PATH: str  = '../data/example.csv'
 
 # Plot nozzle contour
