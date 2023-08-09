@@ -34,7 +34,7 @@ from newton_raphson import newton_raphson
 GAMMA:      float = 1.4
 MACH_E:     float = 2.4
 RAD_THROAT: float = 1.0
-N_LINES:    int   = 100
+N_LINES:    int   = 25
 
 # Global method switch for the inverse Prandtl-Meyer function
 METHOD: str = 'newton'
