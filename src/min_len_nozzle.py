@@ -30,36 +30,11 @@ import numpy as np
 
 from newton_raphson import newton_raphson
 
-# NOTE: There's some really interesting wonky stuff going on here. If I change the angle division
-#       to angle / (N_LINES - 1), set the flow_ang of point 1 to be zero, and remove the d_angle
-#       addition from the first characteristic line pair, the solution becomes much more accurate
-
-#       Right now, I'm basically saying that the flow angle of point 1 is set to d_angle, which is
-#       a pretty bad assumption when the number of lines is small. The assumption becomes relatively
-#       decent at higher numbers of lines, but it still isn't great.
-
-#       The new system is essentially saying that the flow angle at point 1 is always 0, but the PM
-#       angle there can't be zero, so some small number needs to be chosen for that no matter what.
-#       This is of course because if the PM angle was zero, the Mach number at point 1 would be 1
-#       and it would fall on the sonic line, which is no good.
-
-#       The problem with the new method would be that the positive Riemann invariant at point 1
-#       would not match with the rest of the points along the first characteristic line pair.
-
-#       I've checked out two other MOC solvers written in MATLAB to check my answers, and the code
-#       as-is now agrees with those two solvers almost exactly. They seem to be using the same
-#       method for getting the initial flow angle at point 1, that is just setting it as the angle
-#       division.
-
-#       Additionally, with the new method the geometry of the first characteristic line pair just
-#       looks strange, and the first wall point is placed very close to the second. Of course, this
-#       doesn't mean that the algorithm is wrong, but it is something that I've noticed.
-
 # Global design parameters
 GAMMA:      float = 1.4
 MACH_E:     float = 2.4
 RAD_THROAT: float = 1.0
-N_LINES:    int   = 25
+N_LINES:    int   = 100
 
 # Global method switch for the inverse Prandtl-Meyer function
 METHOD: str = 'newton'
@@ -218,8 +193,8 @@ def inverse_prandtl_meyer(pran_ang: float) -> float:
         # Traditional root finding technique using the Newton-Raphson method
         def func(mach_num):
             return np.sqrt((GAMMA + 1)/(GAMMA - 1)) * \
-                np.arctan(np.sqrt((mach_num**2 - 1) * (GAMMA - 1)/(GAMMA + 1))) - \
-                np.arctan(np.sqrt(mach_num**2 - 1)) - pran_ang
+                   np.arctan(np.sqrt((mach_num**2 - 1) * (GAMMA - 1)/(GAMMA + 1))) - \
+                   np.arctan(np.sqrt(mach_num**2 - 1)) - pran_ang
 
         def dfunc(mach_num):
             return (np.sqrt(mach_num**2 - 1))/(mach_num + (GAMMA - 1)/2*mach_num**3)
@@ -277,15 +252,14 @@ def angle_divs(angle: float):
     '''
 
     # Find the necessary change in angle for each step
-    d_angle = angle / N_LINES
+    d_angle = angle / (N_LINES - 1)
 
-    # Creates a list of angle divisions that begins at zero and ends at one division before the
-    # input angle
+    # Creates a list of angle divisions that begins at zero and ends at the input angle
     angles = []
     for i in range(N_LINES):
         angles.append(d_angle * i)
 
-    return d_angle, angles
+    return angles
 
 def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> list['CharPoint']:
     '''
@@ -303,7 +277,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     max_wall_ang = 0.5 * prandtl_meyer(MACH_E)
 
     # Get the list of angle divisions and the division size
-    d_angle, th_divs = angle_divs(max_wall_ang)
+    flow_ang_divs = angle_divs(max_wall_ang)
 
     # Point (a)
     x_a = 0
@@ -311,17 +285,18 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     # Note the flow angle for the first point needs to be the same as the PM angle so that the K+
     # Riemann invariant is constant for the first set of characteristic points
 
-    # TODO: The final area ratio is actually more accurate if the flow angle here is set to 0
+    # We set the flow angle at the first point to zero because it is on the centerline
+    # (This is already enforced from point initialization, but it is reiterated here for clarity)
 
-    #       This makes sense to me because point 1 is always a centerline point, which means the
-    #       flow angle should be 0, but this causes the K+ Riemann invariant to deviate from 0
-    #       for the first point, which seems undesireable
+    # The Prandtl-Meyer angle doesn't matter because we choose a starting Mach number as our design
+    # initializer instead; we just choose 0 to match the flow angle and enforce the Riemann
+    # invariant
 
-    #       For now, I'm leaving it as is so that the Riemann invariant @ point 1 is zero as shown
-    #       in Anderson's Modern Compressible Flow in Example 11.1
-    char_pts[0].flow_ang = th_divs[1]
-    char_pts[0].pran_ang = th_divs[1]
-    char_pts[0].mach_num = inverse_prandtl_meyer(char_pts[0].pran_ang)
+    # A value close to 1 but not too close to cause issues with the algorithm
+    # is valid, something in the range of 1.01 yields good results
+    char_pts[0].flow_ang = 0.0
+    char_pts[0].pran_ang = 0.0
+    char_pts[0].mach_num = 1.01
     char_pts[0].mach_ang = mach_angle(char_pts[0].mach_num)
 
     # The slope of the characteristic line coming in to point 1 relative to the centerline is the
@@ -342,18 +317,10 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
         if not char_pts[i].on_wall:
             # Starting with the points directly following point 1 (which falls on the centerline)
 
-            # Because this loop starts at point 2 instead of point 1, directly indexing the angle
-            # divisions array would use the previous angle value instead of the current one because
-            # point 1 uses the index i = 1 instead of i = 0
-
-            # For example, say point 1 has a flow angle set to 0.2, then point 2 needs to start
-            # with a flow angle of 0.4 instead of 0.2, otherwise points 1 and 2 would have the same
-            # flow angle - which would be incorrect
-
-            # Therefore, one angle increment needs to be added to the angle of these points to
-            # compensate for this difference
-            char_pts[i].flow_ang = th_divs[i] + d_angle
-            char_pts[i].pran_ang = th_divs[i] + d_angle
+            # The flow angle of point 1 is zero, so all subsequent points simply use the flow angle
+            # divisions starting from index [1]
+            char_pts[i].flow_ang = flow_ang_divs[i]
+            char_pts[i].pran_ang = flow_ang_divs[i]
             char_pts[i].mach_num = inverse_prandtl_meyer(char_pts[i].pran_ang)
             char_pts[i].mach_ang = mach_angle(char_pts[i].mach_num)
 
@@ -406,7 +373,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
         cnt_pt = i - (N_LINES - j) - 1
 
         if char_pts[i].on_cent:
-            # For centerline points, we know the K- Riemann constant is the same as the previous
+            # For centerline points, we know the K- Riemann invariant is the same as the previous
             # upper point
             char_pts[i].k_neg = char_pts[top_pt].k_neg
 
@@ -451,7 +418,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].mach_num = inverse_prandtl_meyer(char_pts[i].pran_ang)
             char_pts[i].mach_ang = mach_angle(char_pts[i].mach_num)
 
-            # Simple averaging to find the slope of the lines passing through
+            # Simple averaging to find the slope of the characteristic lines passing through
             c_neg = 0.5 * (char_pts[top_pt].flow_ang - char_pts[top_pt].mach_ang + \
                            char_pts[i].flow_ang - char_pts[i].mach_ang)
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
@@ -477,12 +444,14 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             # points are averaged (lines eminate before and after the point, so taking the average
             # is an easy way to get the slope "at" the point itself)
             c_neg = 0.5 * (char_pts[top_pt].flow_ang + char_pts[i].flow_ang)
+            # The C+ line emanates from the previous point, so its calculations are done as normal
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
             char_pts[i].xy_loc = find_xy(char_pts[top_pt].xy_loc,
                                          char_pts[prv_pt].xy_loc, c_neg, c_pos)
 
+            # Increment to note that a wall point has been passed
             j += 1
 
     return char_pts
@@ -567,7 +536,7 @@ class CharPoint:
     k_neg: float = 0
     k_pos: float = 0
 
-    # Positions
+    # Position
 
     # This is some weird syntax, but dataclasses do not support mutable lists normally, so this has
     # to be used instead
