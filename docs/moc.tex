@@ -1,0 +1,67 @@
+\documentclass[11pt, fleqn, twoside]{report}
+\usepackage[parfill, skip=1em]{parskip}
+\usepackage[labelfont=bf]{caption}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{mathtools, physics}
+
+% hyperref
+\urlstyle{same}
+
+% mathtools
+\DeclarePairedDelimiter\p{\lparen}{\rparen}
+\DeclarePairedDelimiter\bk{\lbrack}{\rbrack}
+
+% custom
+\newcommand{\DD}[1]{\Delta#1} % finite difference
+\newcommand{\odv}{\dv}
+
+\title{Method of Characteristics}
+\author{amilkyboi}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\chapter{Axisymmetric}
+\label{c:axisymmetric}
+
+Axisymmetric compatibility equations:
+\begin{gather*}
+    \dd(\theta + \nu) = \frac{1}{\sqrt{M^2 - 1} - \cot{\theta}}\frac{\dd{r}}{r} \\
+    \dd(\theta - \nu) = -\frac{1}{\sqrt{M^2 - 1} + \cot{\theta}}\frac{\dd{r}}{r}
+\end{gather*}
+
+Rewriting in terms of Riemann invariants:
+\begin{gather*}
+    \odv{K^-}{r} = \frac{1}{\sqrt{M^2 - 1} - \cot{\theta}}\frac{1}{r} \\
+    \odv{K^+}{r} = -\frac{1}{\sqrt{M^2 - 1} + \cot{\theta}}\frac{1}{r}
+\end{gather*}
+
+General rearward finite differencing:
+\begin{equation*}
+    \p*{\pdv{u}{x}}_{i,j} = \frac{u_{i,j} - u_{i-1,j}}{\DD{x}}
+\end{equation*}
+
+Rearward differencing for compat. equations:
+\begin{gather*}
+    \p*{\odv{K^-}{r}}_{i,j} = \frac{K_{i,j}^- - K_{i-1,j}^-}{\DD{r}} \\
+    \p*{\odv{K^+}{r}}_{i,j} = \frac{K_{i,j}^+ - K_{i-1,j}^+}{\DD{r}}
+\end{gather*}
+
+Substitute:
+\begin{gather*}
+    \frac{K_{i,j}^- - K_{i-1,j}^-}{\DD{r}} = \frac{1}{\sqrt{M^2 - 1} - \cot{\theta}}\frac{1}{r} \\
+    \frac{K_{i,j}^+ - K_{i-1,j}^+}{\DD{r}} = -\frac{1}{\sqrt{M^2 - 1} + \cot{\theta}}\frac{1}{r}
+\end{gather*}
+
+Rearrange:
+\begin{gather*}
+    K_{i,j}^- = K_{i-1,j}^- + \frac{\DD{r}}{r_{i-1,j}}\frac{1}{\sqrt{M_{i-1,j}^2 - 1} - \cot{\theta_{i-1,j}}} \\
+    K_{i,j}^+ = K_{i-1,j}^+ - \frac{\DD{r}}{r_{i-1,j}}\frac{1}{\sqrt{M_{i-1,j}^2 - 1} + \cot{\theta_{i-1,j}}}
+\end{gather*}
+
+\end{document}
