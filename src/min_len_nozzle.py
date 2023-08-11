@@ -458,7 +458,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
 
 def plotting(wall_data: tuple[list[float], list[float]],
              char_data: tuple[list[float], list[float]],
-             calcd_area_ratio: float, ideal_area_ratio: float, percent_error: float):
+             calcd_area_ratio: float, ideal_area_ratio: float, percent_error: float, char_pts):
     '''
     Plotting interface for a visual representation of the nozzle geometry.
 
@@ -489,6 +489,51 @@ def plotting(wall_data: tuple[list[float], list[float]],
     # Interior and centerline points
     plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors=cmap)
     plt.scatter(char_data[0], [-y for y in char_data[1]], facecolors='none', edgecolors=cmap)
+
+    # Finds the indices of the points that lie on each right-running characteristic
+    def find_rght_chars(num):
+        sequence  = []
+        start     = num
+        increment = N_LINES
+
+        for _ in range(num):
+            sequence.append(start)
+            start += increment
+            increment -= 1
+
+        return sequence
+
+    # Finds the indices of the points that lie on each left-running characteristic
+    def find_left_chars(num):
+        result = []
+        start  = 1
+
+        # Decrement since the first list element is largest
+        for i in range(num, 1, -1):
+            sublist = list(range(start, start + i))
+            result.append(sublist)
+            start += i
+
+        return result
+
+    # Store the indices of the points that lie on the characteristics
+    rght_chars = [find_rght_chars(num) for num in range(2, N_LINES + 1)]
+    left_chars = find_left_chars(N_LINES + 1)
+
+    for i in range(len(char_pts) - 1):
+        for j, _ in enumerate(left_chars):
+            if char_pts[i].idx in left_chars[j] and char_pts[i+1].idx in left_chars[j]:
+                plt.plot([char_pts[i].xy_loc[0], char_pts[i+1].xy_loc[0]],
+                         [char_pts[i].xy_loc[1], char_pts[i+1].xy_loc[1]], 'w')
+
+    for i, vals in enumerate(rght_chars):
+        for j, _ in enumerate(vals):
+            if vals[j] < vals[-1]:
+                plt.plot([char_pts[vals[j] - 1].xy_loc[0], char_pts[vals[j+1] - 1].xy_loc[0]],
+                         [char_pts[vals[j] - 1].xy_loc[1], char_pts[vals[j+1] - 1].xy_loc[1]], 'w')
+
+    for i in range(N_LINES):
+        plt.plot([0.0, char_pts[i].xy_loc[0]], [RAD_THROAT, char_pts[i].xy_loc[1]], 'w')
 
     # Other information
     plt.axis('equal')
@@ -604,7 +649,7 @@ def main():
 
     if PLOT:
         plotting((x_wall, y_wall), (x_char, y_char), calcd_area_ratio, \
-                 ideal_area_ratio, percent_error)
+                 ideal_area_ratio, percent_error, char_pts)
 
 if __name__ == '__main__':
     main()
