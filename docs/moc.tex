@@ -1,0 +1,112 @@
+\documentclass[11pt, fleqn, twoside]{report}
+\usepackage[parfill, skip=1em]{parskip}
+\usepackage[labelfont=bf]{caption}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{mathtools, mathrsfs, physics}
+
+% hyperref
+\urlstyle{same}
+
+% mathtools
+\DeclarePairedDelimiter\p{\lparen}{\rparen}
+\DeclarePairedDelimiter\bk{\lbrack}{\rbrack}
+
+% custom
+\newcommand{\DD}[1]{\Delta#1} % finite difference
+\newcommand{\odv}{\dv}
+
+\title{Method of Characteristics}
+\author{amilkyboi}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\chapter{Axisymmetric}
+\label{c:axisymmetric}
+
+Characteristic and compatibility equations:
+\begin{gather*}
+    \odv{y}{x} = \tan(\theta \mp \mu) \\
+    \frac{\dd{V}}{V} \mp \tan{\mu}\dd{\theta} - \frac{\tan{\mu}\sin{\mu}\sin{\theta}}{\cos(\theta \pm \mu)}\frac{\dd{x}}{y} = 0
+\end{gather*}
+
+Finite differencing:
+\begin{gather*}
+    \frac{y_C - y_A}{x_C - x_A} = \tan(\theta_A + \mu_A) \\
+    \frac{y_C - y_B}{x_C - x_B} = \tan(\theta_B - \mu_B)
+\end{gather*}
+
+Solving:
+\begin{gather*}
+    x_C = \frac{y_A - y_B + x_B\tan(\theta_B - \mu_B) - x_A\tan(\theta_A + \mu_A)}{\tan(\theta_B - \mu_B) - \tan(\theta_A + \mu_A)} \\
+    y_C = y_A + (x_C - x_A)\tan(\theta_A + \mu_A)
+\end{gather*}
+
+Differential compatibility equations:
+\begin{gather*}
+    \frac{V_C - V_A}{V_A} - (\theta_C - \theta_A)\tan{\mu_A} - \frac{\tan{\mu_A}\sin{\mu_A}\sin{\theta_A}}{\cos(\theta_A + \mu_A)}\frac{x_C - x_A}{y_A} = 0 \\
+    \frac{V_C - V_B}{V_B} + (\theta_C - \theta_B)\tan{\mu_B} - \frac{\tan{\mu_B}\sin{\mu_B}\sin{\theta_B}}{\cos(\theta_B - \mu_B)}\frac{x_C - x_B}{y_B} = 0
+\end{gather*}
+
+Solving for $V_C$:
+\begin{equation*}
+    V_C = \frac{\cot{\mu_A}\bk*{1 + \mathscr{L}_A(x_C - x_A)} + \cot{\mu_B}\bk*{1 + \mathscr{M}_B(x_C - x_B)} + \theta_B - \theta_A}{\frac{\cot{\mu_A}}{V_A} + \frac{\cot{\mu_B}}{V_B}}
+\end{equation*}
+where
+\begin{gather*}
+    \mathscr{L}_A = \frac{\tan{\mu_A}\sin{\mu_A}\sin{\theta_A}}{y_A\cos(\theta_A + \mu_A)} \\
+    \mathscr{M}_B = \frac{\tan{\mu_B}\sin{\mu_B}\sin{\theta_B}}{y_B\cos(\theta_B - \mu_B)}
+\end{gather*}
+
+Solving for the flow angle:
+\begin{equation*}
+    \theta_C = \theta_A + \cot{\mu_A}\bk*{\frac{V_C - V_A}{V_A} - \mathscr{L}_A(x_C - x_A)}
+\end{equation*}
+
+Second order positions:
+\begin{gather*}
+    x_{C'} = \frac{y_A - y_B + \frac{1}{2}\bk*{\tan(\theta_B - \mu_B) + \tan(\theta_C - \mu_C)}x_B - \frac{1}{2}\bk*{tan(\theta_A + \mu_A) + \tan(\theta_C + \mu_C)}x_A}{\frac{1}{2}\bk*{\tan(\theta_B - \mu_B) + \tan(\theta_C - \mu_C) - \tan(\theta_A + \mu_A) - \tan(\theta_C + \mu_C)}} \\
+    y_{C'} = y_A + (x_C - x_A)\frac{1}{2}\bk*{\tan(\theta_A + \mu_A) + \tan(\theta_C + \mu_C)}
+\end{gather*}
+
+The velocity becomes:
+\begin{equation*}
+    V_{C'} = \frac{\mathscr{N}_A + \mathscr{N}_B + \theta_B - \theta_A}{4\bk*{(V_A + V_C)^{-1}(\tan{\mu_A} + \tan{\mu_C})^{-1} + (V_B + V_C)^{-1}(\tan{\mu_B} + \tan{\mu_C})^{-1}}}
+\end{equation*}
+where
+\begin{gather*}
+    \mathscr{N}_A = \frac{2}{\tan{\mu_A} + \tan{\mu_C}}\bk*{\frac{2V_A}{V_A + V_C} + \frac{\mathscr{L}_A + \mathscr{L}_C}{2}(x_C - x_A)} \\
+    \mathscr{N}_B = \frac{2}{\tan{\mu_B} + \tan{\mu_C}}\bk*{\frac{2V_B}{V_B + V_C} + \frac{\mathscr{M}_B + \mathscr{M}_C}{2}(x_C - x_B)}
+\end{gather*}
+
+The flow angle is:
+\begin{equation*}
+    \theta_{C'} = \theta_A + \frac{2}{\tan{\mu_A} + \tan{\mu_C}}\bk*{\frac{2(V_{C'} - V_A)}{V_C + V_A} - \frac{\mathscr{L}_A + \mathscr{L}_C}{2}(x_C - x_A)}
+\end{equation*}
+
+The temperature is:
+\begin{equation*}
+    T_{C'} = T^* - \frac{V_{C'}^2}{2c_p}
+\end{equation*}
+
+The Mach number can be found as:
+\begin{equation*}
+    M_{C'} = \frac{V_{C'}}{\sqrt{\gamma RT_{C'}}}
+\end{equation*}
+
+The Mach angle is then:
+\begin{equation}
+    \mu_{C'} = \arcsin(\frac{1}{M_{C'}})
+\end{equation}
+
+Centerline pressure distributions:
+\begin{gather*}
+    \text{cosine:}\quad \ln{p} = \frac{1}{2}(\ln{p_t} - \ln{p_e})\cos[]
+\end{gather*}
+
+\end{document}

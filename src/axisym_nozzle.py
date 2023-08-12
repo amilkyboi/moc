@@ -1,24 +1,6 @@
-# module min_len_nozzle
+# module axisym_nozzle
 '''
-Applies the method of characteristics for the design of a minimum-length supersonic nozzle. The
-methods applied here assume that the flow inside the nozzle is:
-- steady
-- adiabatic
-- two-dimensional
-- irrotational
-- shock-free
-- isentropic
-- supersonic
-
-This code assumes a straight vertical sonic line at the nozzle throat and neglects the expansion
-section entirely. Only the straightening section is considered, where the wall angle steadily
-decreases.
-
-Note that the compatibility equations used here are not valid for axisymmetric flow; this tool
-should not be used for axisymmetric nozzle designs.
-
-Requirements:
-    Python 3.7+ (for dataclasses), matplotlib, scienceplots, pandas, numpy
+Axisymmetric nozzle design.
 '''
 
 from dataclasses import dataclass, field
@@ -456,56 +438,9 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
 
     return char_pts
 
-def find_rght_chars(num: int) -> list[int]:
-    '''
-    Finds the indices of the points that lie on each right-running characteristic by finding the
-    triangular sequence of the input number.
-
-    Args:
-        num (int): characteristic point index
-
-    Returns:
-        list[int]: triangular sequence corresponding to the index of the input point
-    '''
-
-    sequence  = []
-    start     = num
-    increment = N_LINES
-
-    for _ in range(num):
-        sequence.append(start)
-        start += increment
-        increment -= 1
-
-    return sequence
-
-def find_left_chars(num: int) -> list[list[int]]:
-    '''
-    Finds the indices of the points that lie on each left-running characteristic.
-
-    Args:
-        num (int): characteristic point index
-
-    Returns:
-        list[list[int]]: list for each point index containing which points follow in a decreasing
-                         sequence
-    '''
-
-    result = []
-    start  = 1
-
-    # Decrement since the first list element is largest
-    for i in range(num, 1, -1):
-        sublist = list(range(start, start + i))
-        result.append(sublist)
-        start += i
-
-    return result
-
 def plotting(wall_data: tuple[list[float], list[float]],
              char_data: tuple[list[float], list[float]],
-             calcd_area_ratio: float, ideal_area_ratio: float,
-             percent_error: float, char_pts: list['CharPoint']):
+             calcd_area_ratio: float, ideal_area_ratio: float, percent_error: float):
     '''
     Plotting interface for a visual representation of the nozzle geometry.
 
@@ -515,7 +450,6 @@ def plotting(wall_data: tuple[list[float], list[float]],
         calcd_area_ratio (float): calculated area ratio using throat radius and final y coordinate
         ideal_area_ratio (float): ideal area ratio calculated using isentropic relations
         percent_error (float): % error between the calculated and ideal area ratios
-        char_pts (list['CharPoint']): list of characteristic points
     '''
 
     # Colors for internal points
@@ -538,30 +472,7 @@ def plotting(wall_data: tuple[list[float], list[float]],
     plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors=cmap)
     plt.scatter(char_data[0], [-y for y in char_data[1]], facecolors='none', edgecolors=cmap)
 
-    # Store the indices of the points that lie on the characteristics
-    rght_chars = [find_rght_chars(num) for num in range(2, N_LINES + 1)]
-    left_chars = find_left_chars(N_LINES + 1)
-
-    # Plot left-running characteristic lines
-    for i in range(len(char_pts) - 1):
-        for j, _ in enumerate(left_chars):
-            # Ensure that the separate lines are not connected
-            if char_pts[i].idx in left_chars[j] and char_pts[i+1].idx in left_chars[j]:
-                plt.plot([char_pts[i].xy_loc[0], char_pts[i+1].xy_loc[0]],
-                         [char_pts[i].xy_loc[1], char_pts[i+1].xy_loc[1]], 'w')
-
-    # Plot right-running characteristic lines
-    for i, vals in enumerate(rght_chars):
-        for j, _ in enumerate(vals):
-            if vals[j] < vals[-1]:
-                plt.plot([char_pts[vals[j] - 1].xy_loc[0], char_pts[vals[j+1] - 1].xy_loc[0]],
-                         [char_pts[vals[j] - 1].xy_loc[1], char_pts[vals[j+1] - 1].xy_loc[1]], 'w')
-
-    # Plot lines that emanate from the throat to the first set of points
-    for i in range(N_LINES):
-        plt.plot([0.0, char_pts[i].xy_loc[0]], [RAD_THROAT, char_pts[i].xy_loc[1]], 'w')
-
-    # Show final design information
+    # Other information
     plt.axis('equal')
     plt.title(f'Input: $M_\\mathrm{{e}}={MACH_E}$, $\\gamma={GAMMA}$, \
                 $N_\\mathrm{{lines}}={N_LINES}$, $r_\\mathrm{{t}}={RAD_THROAT}$ \n \
@@ -675,7 +586,7 @@ def main():
 
     if PLOT:
         plotting((x_wall, y_wall), (x_char, y_char), calcd_area_ratio, \
-                 ideal_area_ratio, percent_error, char_pts)
+                 ideal_area_ratio, percent_error)
 
 if __name__ == '__main__':
     main()
