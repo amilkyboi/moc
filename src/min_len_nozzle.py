@@ -22,6 +22,7 @@ Requirements:
 '''
 
 from dataclasses import dataclass, field
+from scipy.interpolate import griddata
 
 import matplotlib.pyplot as plt
 import scienceplots # pylint: disable=unused-import
@@ -518,11 +519,6 @@ def plotting(wall_data: tuple[list[float], list[float]],
         char_pts (list['CharPoint']): list of characteristic points
     '''
 
-    # Colors for internal points
-    cols = np.sqrt(np.array(char_data[0])**2 + np.array(char_data[1])**2)
-    norm = cols / cols.max()
-    cmap = plt.cm.magma(norm)
-
     # Use the scienceplots module and a dark theme
     plt.style.use(['science', 'grid', 'dark_background'])
 
@@ -535,8 +531,7 @@ def plotting(wall_data: tuple[list[float], list[float]],
     plt.scatter(wall_data[0], [-y for y in wall_data[1]], facecolors='none', edgecolors='w')
 
     # Interior and centerline points
-    plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors=cmap)
-    plt.scatter(char_data[0], [-y for y in char_data[1]], facecolors='none', edgecolors=cmap)
+    plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors='w')
 
     # Store the indices of the points that lie on the characteristics
     rght_chars = [find_rght_chars(num) for num in range(2, N_LINES + 1)]
@@ -561,6 +556,26 @@ def plotting(wall_data: tuple[list[float], list[float]],
     for i in range(N_LINES):
         plt.plot([0.0, char_pts[i].xy_loc[0]], [RAD_THROAT, char_pts[i].xy_loc[1]], 'w')
 
+    # Get x and y data from characteristic point locations
+    x_data = [c.xy_loc[0] for c in char_pts]
+    y_data = [c.xy_loc[1] for c in char_pts]
+
+    # Form the x, y data into ranges for use with meshgrid
+    x_range = np.linspace(min(x_data), max(x_data), len(x_data))
+    y_range = np.linspace(min(y_data), max(y_data), len(y_data))
+
+    # Form a 2-D mesh that works with contour plots
+    x_mesh, y_mesh = np.meshgrid(x_range, y_range)
+
+    # Mach number data needs to be interpolated into a 2-D grid. Originally, the data is just stored
+    # in a 1-D grid, where each Mach number is associated with a point in space. This interpolates
+    # the Mach number data into a 2-D domain that can be used with a contour plot
+    z_mesh = griddata((x_data, y_data), [c.mach_num for c in char_pts], (x_mesh, y_mesh))
+
+    # Mach number contours between characteristic lines (flip y coordinate to plot below the
+    # characteristic lines for clarity)
+    plt.contourf(x_mesh, -y_mesh, z_mesh, cmap='magma', levels=N_LINES)
+
     # Show final design information
     plt.axis('equal')
     plt.title(f'Input: $M_\\mathrm{{e}}={MACH_E}$, $\\gamma={GAMMA}$, \
@@ -569,6 +584,7 @@ def plotting(wall_data: tuple[list[float], list[float]],
                 Error: {percent_error}\\%')
     plt.xlabel('Nozzle Length $x$, [m]')
     plt.ylabel('Nozzle Height $y$, [m]')
+    plt.colorbar(label='Mach Number, $M$ [-]')
     plt.show()
 
 def data_output(x_data: list[float], y_data: list[float]):
