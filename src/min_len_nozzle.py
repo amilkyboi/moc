@@ -526,9 +526,8 @@ def plotting(wall_data: tuple[list[float], list[float]],
     plt.plot(wall_data[0], wall_data[1], 'w')
     plt.plot(wall_data[0], [-y for y in wall_data[1]], 'w')
 
-    # Top and bottom wall points
+    # Top wall points
     plt.scatter(wall_data[0], wall_data[1], facecolors='none', edgecolors='w')
-    plt.scatter(wall_data[0], [-y for y in wall_data[1]], facecolors='none', edgecolors='w')
 
     # Interior and centerline points
     plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors='w')
