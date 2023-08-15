@@ -1,22 +1,23 @@
-# module axisym_nozzle
+# module expansion_fan
 '''
-Axisymmetric nozzle design.
+Temporary file to incorporate expansion waves.
 '''
 
 from dataclasses import dataclass, field
 
 import matplotlib.pyplot as plt
 import scienceplots # pylint: disable=unused-import
-import pandas as pd
 import numpy as np
 
-from newton_raphson import newton_raphson
+from flow import newton_raphson
 
 # Global design parameters
 GAMMA:      float = 1.4
-MACH_E:     float = 2.4
+EXIT_MACH:  float = 2.4
 RAD_THROAT: float = 1.0
 N_LINES:    int   = 25
+EXIT_PRES: float = 200
+BACK_PRES: float = 100
 
 # Global method switch for the inverse Prandtl-Meyer function
 METHOD: str = 'newton'
@@ -30,6 +31,7 @@ PATH: str  = '../data/example.csv'
 
 # Plot nozzle contour
 PLOT: bool = True
+RAD_EXIT = 1
 
 def number_of_points() -> int:
     '''
@@ -40,7 +42,7 @@ def number_of_points() -> int:
         int: number of characteristic points
     '''
 
-    return int(N_LINES + N_LINES * 0.5 * (N_LINES + 1))
+    return int(N_LINES * 0.5 * (N_LINES + 1))
 
 def initialize_points(n_points: int) -> list['CharPoint']:
     '''
@@ -57,13 +59,8 @@ def initialize_points(n_points: int) -> list['CharPoint']:
     # Array for storing the list of points, note that each point is an object
     char_pts = []
 
-    # The number of points that lie along the first C+ left-running characteristic line is equal to
-    # 1 + N_LINES
-    j = 1 + N_LINES
-
-    # This is a counter that will increment by one each time a wall point is encountered, see the
-    # loop below for details on numbering
-    k = 0
+    j = 1
+    k = N_LINES
 
     # Since the indexing in literature begins at 1 instead of zero, the internal idx attribute of
     # each point will reflect this, hence why this loop begins at 1 instead of 0
@@ -71,40 +68,15 @@ def initialize_points(n_points: int) -> list['CharPoint']:
         # Create an object for each point and set the index accordingly
         point = CharPoint(idx=i)
 
-        # First, j is the index of the first point that falls on the wall, so that point is marked
-        # as a wall point (for 7 characteristic lines, point 8 is the first point on the wall)
-        if i == j + k:
-            point.on_wall = True
+        # Mark centerline points
+        if i == j:
+            point.on_cent = True
 
-            # The j counter decreases by one each iteration because 1 characteristic point is 'lost'
-            # for each C-, C+ pair that eminates from the throat of the nozzle
-
-            # For 7 characteristic lines, the wall indices are: 8, 15, 21, 26, 30, 33, 35
-            # Note that the change from one to the next decreases by one for each wall point
-            # increment
-            k += 1
-            j += N_LINES - k
+            j += k
+            k -= 1
 
         # Add each point object to the array
         char_pts.append(point)
-
-    # Again loop over everything to find centerline points. Here, the range begins at 0 since list
-    # indexing is being performed and the internal idx attributes are not being changed / accessed
-    for i in range(0, n_points):
-        # The first point is placed on the centerline by definition, so its state is changed
-        # accordingly
-        if char_pts[i].idx == 1:
-            char_pts[i].on_cent   = True
-            char_pts[i].flow_ang  = 0
-            char_pts[i].xy_loc[1] = 0
-
-        # Since all wall points are essentially the 'end' of a C-, C+ characteristic line pair, the
-        # first point on the next characteristic pair will always be a centerline point
-        if i >= 1:
-            if char_pts[i - 1].on_wall:
-                char_pts[i].on_cent   = True
-                char_pts[i].flow_ang  = 0
-                char_pts[i].xy_loc[1] = 0
 
     return char_pts
 
@@ -243,6 +215,19 @@ def angle_divs(angle: float):
 
     return angles
 
+def pressure_ratio(gamma, mach):
+    '''
+    Calculates the total (stagnation) pressure ratio, p/p0.
+    '''
+    return (1 + (gamma - 1)/2 * mach**2)**(-gamma/(gamma - 1))
+
+def mach_from_pres(gamma, pres_ratio):
+    '''
+    blah.
+    '''
+
+    return np.sqrt((2 / (gamma - 1)) * (pres_ratio**(-(gamma - 1) / gamma) - 1))
+
 def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> list['CharPoint']:
     '''
     Performs the method of characteristics for a purely 2-D minimum-length supersonic nozzle.
@@ -255,14 +240,21 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
         list[float]: list of equally spaced divisions
     '''
 
-    # Find the maximum wall angle in radians
-    max_wall_ang = 0.5 * prandtl_meyer(MACH_E)
+    exit_pressure_ratio = pressure_ratio(GAMMA, EXIT_MACH)
 
-    # Get the list of angle divisions and the division size
-    flow_ang_divs = angle_divs(max_wall_ang)
+    back_pressure_ratio = BACK_PRES / EXIT_PRES * exit_pressure_ratio
+
+    back_mach = mach_from_pres(GAMMA, back_pressure_ratio)
+
+    nu_3 = prandtl_meyer(back_mach)
+    nu_1 = prandtl_meyer(EXIT_MACH)
+
+    theta_3 = nu_3 - nu_1
+
+    flow_ang_divs = angle_divs(theta_3)
 
     # Point (a)
-    x_a = 0
+    x_a = 0.0
 
     # Note the flow angle for the first point needs to be the same as the PM angle so that the K+
     # Riemann invariant is constant for the first set of characteristic points
@@ -277,87 +269,64 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     # A value close to 1 but not too close to cause issues with the algorithm
     # is valid, something in the range of 1.01 yields good results
     char_pts[0].flow_ang = 0.0
-    char_pts[0].pran_ang = 0.0
-    char_pts[0].mach_num = 1.01
+    char_pts[0].pran_ang = prandtl_meyer(EXIT_MACH)
+    char_pts[0].mach_num = EXIT_MACH
     char_pts[0].mach_ang = mach_angle(char_pts[0].mach_num)
 
     # The slope of the characteristic line coming in to point 1 relative to the centerline is the
     # Mach angle minus the flow angle
 
     # Using x = y / tan(angle) the position of the first point can be found
-    char_pts[0].xy_loc = [RAD_THROAT / (np.tan(char_pts[0].mach_ang - char_pts[0].flow_ang)), 0]
+    char_pts[0].xy_loc = [RAD_EXIT / (np.tan(char_pts[0].mach_ang - char_pts[0].flow_ang)), 0.0]
 
     # Keep track of Riemann invariants
     char_pts[0].k_neg = char_pts[0].flow_ang + char_pts[0].pran_ang
     char_pts[0].k_pos = char_pts[0].flow_ang - char_pts[0].pran_ang
 
-    # Point (2) through point (N_LINES + 1) (a.k.a. the first wall point)
-    for i in range(1, N_LINES + 1):
+    for i in range(1, N_LINES):
         # Previous point
         prv_pt = i - 1
 
-        if not char_pts[i].on_wall:
-            # Starting with the points directly following point 1 (which falls on the centerline)
+        # The flow angle of point 1 is zero, so all subsequent points simply use the flow angle
+        # divisions starting from index [1]
+        char_pts[i].flow_ang = flow_ang_divs[i]
+        char_pts[i].pran_ang = flow_ang_divs[i] + char_pts[0].pran_ang
+        char_pts[i].mach_num = inverse_prandtl_meyer(char_pts[i].pran_ang)
+        char_pts[i].mach_ang = mach_angle(char_pts[i].mach_num)
 
-            # The flow angle of point 1 is zero, so all subsequent points simply use the flow angle
-            # divisions starting from index [1]
-            char_pts[i].flow_ang = flow_ang_divs[i]
-            char_pts[i].pran_ang = flow_ang_divs[i]
-            char_pts[i].mach_num = inverse_prandtl_meyer(char_pts[i].pran_ang)
-            char_pts[i].mach_ang = mach_angle(char_pts[i].mach_num)
+        char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
+        char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
 
-            char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
-            char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
+        # In general, the slopes of the characteristic lines are approximated by:
+        # slope(C-) = 0.5 * ((theta_1 - mu_1) + (theta_3 - mu_3))
+        # slope(C+) = 0.5 * ((theta_2 + mu_2) + (theta_3 + mu_3))
 
-            # In general, the slopes of the characteristic lines are approximated by:
-            # slope(C-) = 0.5 * ((theta_1 - mu_1) + (theta_3 - mu_3))
-            # slope(C+) = 0.5 * ((theta_2 + mu_2) + (theta_3 + mu_3))
+        # Simply the angle of the characteristic line that eminates from the corner of the sharp
+        # throat
+        c_neg = char_pts[i].flow_ang - char_pts[i].mach_ang
+        # Averaging the slope of the C+ characteristic lines from the previous point and the
+        # current point
+        c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
+                       char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            # Simply the angle of the characteristic line that eminates from the corner of the sharp
-            # throat
-            c_neg = char_pts[i].flow_ang - char_pts[i].mach_ang
-            # Averaging the slope of the C+ characteristic lines from the previous point and the
-            # current point
-            c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
-                           char_pts[i].flow_ang + char_pts[i].mach_ang)
-
-            char_pts[i].xy_loc = find_xy([x_a, RAD_THROAT], char_pts[prv_pt].xy_loc, c_neg, c_pos)
-
-        if char_pts[i].on_wall:
-            # Only the first wall point falls within the outer loop parameters, so this loop only
-            # covers one point
-
-            # Wall points have the same flow parameters as the previous point by definition
-            char_pts[i].flow_ang = char_pts[prv_pt].flow_ang
-            char_pts[i].pran_ang = char_pts[prv_pt].pran_ang
-            char_pts[i].mach_num = char_pts[prv_pt].mach_num
-            char_pts[i].mach_ang = char_pts[prv_pt].mach_ang
-
-            char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
-            char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
-
-            # For the first wall point, the previous C- characteristic is just the max wall angle
-            c_neg = max_wall_ang
-            # Averaging the slope of the C+ lines for the previous and current points
-            c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
-                           char_pts[i].flow_ang + char_pts[i].mach_ang)
-
-            char_pts[i].xy_loc = find_xy([x_a, RAD_THROAT], char_pts[prv_pt].xy_loc, c_neg, c_pos)
+        char_pts[i].xy_loc = find_xy([x_a, RAD_EXIT], char_pts[prv_pt].xy_loc, c_neg, c_pos)
 
     # Remaining points (everything not on the first C+, C- characteristic line pair)
     j = 0
-    for i in range(N_LINES + 1, n_points):
+    k = N_LINES
+    for i in range(N_LINES, n_points):
         # Previous point
         prv_pt = i - 1
-        # Previous point vertically above the current point (y_prev > y_curr, x_prev < x_curr)
-        top_pt = i - (N_LINES - j)
         # Previous point that lies on the centerline (only used for centerline point calculations)
-        cnt_pt = i - (N_LINES - j) - 1
+        cnt_pt = j
 
         if char_pts[i].on_cent:
+            j += k
+            k -= 1
+
             # For centerline points, we know the K- Riemann invariant is the same as the previous
             # upper point
-            char_pts[i].k_neg = char_pts[top_pt].k_neg
+            char_pts[i].k_neg = char_pts[i - k].k_neg
 
             # We also know that, since they fall on the centerline, their flow angle is
             # definitionally zero
@@ -373,22 +342,22 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
 
             # Averaging the previous C- characteristic with the current one
-            c_neg = 0.5 * (char_pts[top_pt].flow_ang - char_pts[top_pt].mach_ang + \
+            c_neg = 0.5 * (char_pts[i - k].flow_ang - char_pts[i - k].mach_ang + \
                            char_pts[i].flow_ang - char_pts[i].mach_ang)
             # The lower characteristic line coming into centerline points is from another centerline
             # point, which means the slope is zero
             c_pos = 0.0
 
-            char_pts[i].xy_loc = find_xy(char_pts[top_pt].xy_loc,
+            char_pts[i].xy_loc = find_xy(char_pts[i - k].xy_loc,
                                          char_pts[cnt_pt].xy_loc, c_neg, c_pos)
 
-        if (not char_pts[i].on_cent) and (not char_pts[i].on_wall):
+        if not char_pts[i].on_cent:
             # Internal flowfield points can be entirely characterized by the two characteristic
             # lines (C+ and C-) that pass through them
 
             # By definition, the K- and K+ constants hold from the previous top and bottom points,
             # respectively
-            char_pts[i].k_neg = char_pts[top_pt].k_neg
+            char_pts[i].k_neg = char_pts[i - k].k_neg
             char_pts[i].k_pos = char_pts[prv_pt].k_pos
 
             # Using the definition of the Riemann invariants, the flow angle and Mach angle can be
@@ -401,46 +370,63 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].mach_ang = mach_angle(char_pts[i].mach_num)
 
             # Simple averaging to find the slope of the characteristic lines passing through
-            c_neg = 0.5 * (char_pts[top_pt].flow_ang - char_pts[top_pt].mach_ang + \
+            c_neg = 0.5 * (char_pts[i - k].flow_ang - char_pts[i - k].mach_ang + \
                            char_pts[i].flow_ang - char_pts[i].mach_ang)
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            char_pts[i].xy_loc = find_xy(char_pts[top_pt].xy_loc,
+            char_pts[i].xy_loc = find_xy(char_pts[i - k].xy_loc,
                                          char_pts[prv_pt].xy_loc, c_neg, c_pos)
-
-        if char_pts[i].on_wall:
-            # As before, points on the wall inheret the flow characteristics from the previous point
-            char_pts[i].flow_ang = char_pts[prv_pt].flow_ang
-            char_pts[i].pran_ang = char_pts[prv_pt].pran_ang
-            char_pts[i].mach_num = char_pts[prv_pt].mach_num
-            char_pts[i].mach_ang = char_pts[prv_pt].mach_ang
-
-            char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
-            char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
-
-            # For wall points, the C- characteristic is just the wall angle since there are no
-            # points in the mesh that lie above the wall
-
-            # To find the current angle of the wall, the flow angle of the previous and current
-            # points are averaged (lines eminate before and after the point, so taking the average
-            # is an easy way to get the slope "at" the point itself)
-            c_neg = 0.5 * (char_pts[top_pt].flow_ang + char_pts[i].flow_ang)
-            # The C+ line emanates from the previous point, so its calculations are done as normal
-            c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
-                           char_pts[i].flow_ang + char_pts[i].mach_ang)
-
-            char_pts[i].xy_loc = find_xy(char_pts[top_pt].xy_loc,
-                                         char_pts[prv_pt].xy_loc, c_neg, c_pos)
-
-            # Increment to note that a wall point has been passed
-            j += 1
 
     return char_pts
 
-def plotting(wall_data: tuple[list[float], list[float]],
-             char_data: tuple[list[float], list[float]],
-             calcd_area_ratio: float, ideal_area_ratio: float, percent_error: float):
+def find_rght_chars(num: int) -> list[int]:
+    '''
+    Finds the indices of the points that lie on each right-running characteristic by finding the
+    triangular sequence of the input number.
+
+    Args:
+        num (int): characteristic point index
+
+    Returns:
+        list[int]: triangular sequence corresponding to the index of the input point
+    '''
+
+    sequence  = []
+    start     = num
+    increment = N_LINES - 1
+
+    for _ in range(num):
+        sequence.append(start)
+        start += increment
+        increment -= 1
+
+    return sequence
+
+def find_left_chars(num: int) -> list[list[int]]:
+    '''
+    Finds the indices of the points that lie on each left-running characteristic.
+
+    Args:
+        num (int): characteristic point index
+
+    Returns:
+        list[list[int]]: list for each point index containing which points follow in a decreasing
+                         sequence
+    '''
+
+    result = []
+    start  = 1
+
+    # Decrement since the first list element is largest
+    for i in range(num, 1, -1):
+        sublist = list(range(start, start + i))
+        result.append(sublist)
+        start += i
+
+    return result
+
+def plot_expansion(char_data: tuple[list[float], list[float]], char_pts):
     '''
     Plotting interface for a visual representation of the nozzle geometry.
 
@@ -450,50 +436,39 @@ def plotting(wall_data: tuple[list[float], list[float]],
         calcd_area_ratio (float): calculated area ratio using throat radius and final y coordinate
         ideal_area_ratio (float): ideal area ratio calculated using isentropic relations
         percent_error (float): % error between the calculated and ideal area ratios
+        char_pts (list['CharPoint']): list of characteristic points
     '''
-
-    # Colors for internal points
-    cols = np.sqrt(np.array(char_data[0])**2 + np.array(char_data[1])**2)
-    norm = cols / cols.max()
-    cmap = plt.cm.magma(norm)
 
     # Use the scienceplots module and a dark theme
     plt.style.use(['science', 'grid', 'dark_background'])
 
-    # Lines connecting the top and bottom wall points
-    plt.plot(wall_data[0], wall_data[1], 'w')
-    plt.plot(wall_data[0], [-y for y in wall_data[1]], 'w')
-
-    # Top and bottom wall points
-    plt.scatter(wall_data[0], wall_data[1], facecolors='none', edgecolors='w')
-    plt.scatter(wall_data[0], [-y for y in wall_data[1]], facecolors='none', edgecolors='w')
-
     # Interior and centerline points
-    plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors=cmap)
-    plt.scatter(char_data[0], [-y for y in char_data[1]], facecolors='none', edgecolors=cmap)
+    plt.scatter(char_data[0], char_data[1], facecolors='none', edgecolors='w')
 
-    # Other information
-    plt.axis('equal')
-    plt.title(f'Input: $M_\\mathrm{{e}}={MACH_E}$, $\\gamma={GAMMA}$, \
-                $N_\\mathrm{{lines}}={N_LINES}$, $r_\\mathrm{{t}}={RAD_THROAT}$ \n \
-                Calculated $A/A^*={calcd_area_ratio}$, Ideal $A/A^*={ideal_area_ratio}$, \
-                Error: {percent_error}\\%')
-    plt.xlabel('Nozzle Length $x$, [m]')
-    plt.ylabel('Nozzle Height $y$, [m]')
+    # Store the indices of the points that lie on the characteristics
+    rght_chars = [find_rght_chars(num) for num in range(2, N_LINES + 1)]
+    left_chars = find_left_chars(N_LINES)
+
+    # Plot left-running characteristic lines
+    for i in range(len(char_pts) - 1):
+        for j, _ in enumerate(left_chars):
+            # Ensure that the separate lines are not connected
+            if char_pts[i].idx in left_chars[j] and char_pts[i+1].idx in left_chars[j]:
+                plt.plot([char_pts[i].xy_loc[0], char_pts[i+1].xy_loc[0]],
+                         [char_pts[i].xy_loc[1], char_pts[i+1].xy_loc[1]], 'w')
+
+    # Plot right-running characteristic lines
+    for i, vals in enumerate(rght_chars):
+        for j, _ in enumerate(vals):
+            if vals[j] < vals[-1]:
+                plt.plot([char_pts[vals[j] - 1].xy_loc[0], char_pts[vals[j+1] - 1].xy_loc[0]],
+                         [char_pts[vals[j] - 1].xy_loc[1], char_pts[vals[j+1] - 1].xy_loc[1]], 'w')
+
+    # Plot lines that emanate from the throat to the first set of points
+    for i in range(N_LINES):
+        plt.plot([0.0, char_pts[i].xy_loc[0]], [1, char_pts[i].xy_loc[1]], 'w')
+
     plt.show()
-
-def data_output(x_data: list[float], y_data: list[float]):
-    '''
-    Generates a .csv file containing the upper wall data for use in external programs.
-
-    Args:
-        x_data (list[float]): x coordinates for points on the wall
-        y_data (list[float]): y coordinates for points on the wall
-    '''
-
-    points = pd.DataFrame(np.array([x_data, y_data]).T, columns=['x', 'y'])
-
-    points.to_csv(PATH, index=False)
 
 @dataclass
 class CharPoint:
@@ -507,7 +482,6 @@ class CharPoint:
 
     # Wall and centerline parameters
     on_cent: bool = False
-    on_wall: bool = False
 
     # Flow angle, Prandtl-Meyer angle, and Mach angle
     flow_ang: float = 0
@@ -543,50 +517,16 @@ def main():
     # Since point (a), the point at the sharp throat of the nozzle, is not actually a characteristic
     # point, it needs to be added to the wall points manually
 
-    # This is easy since we know the nozzle design is centered at the origin x-wise and begins at
-    # the sharp throat
-    x_wall = [0.0]
-    y_wall = [RAD_THROAT]
-
     # Add the positions of the points calculated using MOC separately based on if they fall upon the
     # wall or not
     x_char = []
     y_char = []
     for i in range(0, n_points):
-        if not char_pts[i].on_wall:
-            x_char.append(char_pts[i].xy_loc[0])
-            y_char.append(char_pts[i].xy_loc[1])
-
-        if char_pts[i].on_wall:
-            x_wall.append(char_pts[i].xy_loc[0])
-            y_wall.append(char_pts[i].xy_loc[1])
-
-    # Area ratio of the final nozzle design, A/A*
-
-    # Since this nozzle design is two-dimensional, the ratio between the height of the last
-    # wall point and the nozzle throat radius can be used as the area ratio
-    calcd_area_ratio = char_pts[-1].xy_loc[1] / RAD_THROAT
-
-    # Ideal area ratio using isentropic relations
-    ideal_area_ratio = (0.5 * (GAMMA + 1))**(-(GAMMA + 1) / (2 * (GAMMA - 1))) * (1/MACH_E) * \
-                       (1 + 0.5 * (GAMMA - 1) * MACH_E**2)**((GAMMA + 1) / (2 * (GAMMA - 1)))
-
-    # Percent difference in area ratios
-    percent_error = 100 * np.abs(ideal_area_ratio - calcd_area_ratio) / \
-                   (0.5 * (ideal_area_ratio + calcd_area_ratio))
-
-    if INFO:
-        print('OUTPUT:\n')
-        print(f'Ideal A/A*: {ideal_area_ratio}')
-        print(f'Calculated A/A*: {calcd_area_ratio}')
-        print(f'Percent Error: {percent_error}')
-
-    if SAVE:
-        data_output(x_wall, y_wall)
+        x_char.append(char_pts[i].xy_loc[0])
+        y_char.append(char_pts[i].xy_loc[1])
 
     if PLOT:
-        plotting((x_wall, y_wall), (x_char, y_char), calcd_area_ratio, \
-                 ideal_area_ratio, percent_error)
+        plot_expansion((x_char, y_char), char_pts)
 
 if __name__ == '__main__':
     main()
