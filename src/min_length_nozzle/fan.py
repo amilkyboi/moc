@@ -1,6 +1,6 @@
 # module expansion_fan
 '''
-Temporary file to incorporate expansion waves.
+Method of characteristics algorithm for the calculation of the expansion fan following the nozzle.
 '''
 
 import numpy as np
@@ -10,36 +10,26 @@ import geometry as geom
 import constants as cn
 import flow
 
-def pressure_ratio(gamma, mach):
+def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
+                              rad_exit: float) -> list['CharPoint']:
     '''
-    Calculates the total (stagnation) pressure ratio, p/p0.
-    '''
-    return (1 + (gamma - 1)/2 * mach**2)**(-gamma/(gamma - 1))
-
-def mach_from_pres(gamma, pres_ratio):
-    '''
-    blah.
-    '''
-
-    return np.sqrt((2 / (gamma - 1)) * (pres_ratio**(-(gamma - 1) / gamma) - 1))
-
-def method_of_characteristics(char_pts: list['CharPoint'], n_points: int, rad_exit: float) -> list['CharPoint']:
-    '''
-    Performs the method of characteristics for a purely 2-D minimum-length supersonic nozzle.
+    Performs the method of characteristics for a 2-D expansion fan following the exit of a nozzle
+    into freestream conditions.
 
     Args:
         char_pts (list['CharPoint']): list of characteristic point objects
         n_points (int): number of characteristic points
+        rad_exit (float): radius of the nozzle exit
 
     Returns:
-        list[float]: list of equally spaced divisions
+        list['CharPoint']: list of characteristic points
     '''
 
-    exit_pressure_ratio = pressure_ratio(cn.GAMMA, cn.EXIT_MACH)
+    exit_pressure_ratio = flow.pressure_ratio(cn.GAMMA, cn.EXIT_MACH)
 
     back_pressure_ratio = cn.BACK_PRES / cn.EXIT_PRES * exit_pressure_ratio
 
-    back_mach = mach_from_pres(cn.GAMMA, back_pressure_ratio)
+    back_mach = flow.mach_from_pres(cn.GAMMA, back_pressure_ratio)
 
     nu_3 = flow.prandtl_meyer(cn.GAMMA, back_mach)
     nu_1 = flow.prandtl_meyer(cn.GAMMA, cn.EXIT_MACH)
@@ -51,18 +41,6 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int, rad_ex
     # Point (a)
     x_a = 0.0
 
-    # Note the flow angle for the first point needs to be the same as the PM angle so that the K+
-    # Riemann invariant is constant for the first set of characteristic points
-
-    # We set the flow angle at the first point to zero because it is on the centerline
-    # (This is already enforced from point initialization, but it is reiterated here for clarity)
-
-    # The Prandtl-Meyer angle doesn't matter because we choose a starting Mach number as our design
-    # initializer instead; we just choose 0 to match the flow angle and enforce the Riemann
-    # invariant
-
-    # A value close to 1 but not too close to cause issues with the algorithm
-    # is valid, something in the range of 1.01 yields good results
     char_pts[0].flow_ang = 0.0
     char_pts[0].pran_ang = flow.prandtl_meyer(cn.GAMMA, cn.EXIT_MACH)
     char_pts[0].mach_num = cn.EXIT_MACH
@@ -131,7 +109,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int, rad_ex
             char_pts[i].pran_ang = char_pts[i].k_neg - char_pts[i].flow_ang
 
             # The rest of the flow parameters follow as standard
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
+                                                              cn.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
@@ -144,7 +123,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int, rad_ex
             c_pos = 0.0
 
             char_pts[i].xy_loc = geom.find_xy(char_pts[i - k].xy_loc,
-                                         char_pts[cnt_pt].xy_loc, c_neg, c_pos)
+                                              char_pts[cnt_pt].xy_loc, c_neg, c_pos)
 
         if not char_pts[i].on_cent:
             # Internal flowfield points can be entirely characterized by the two characteristic
@@ -161,7 +140,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int, rad_ex
             char_pts[i].pran_ang = 0.5 * (char_pts[i].k_neg - char_pts[i].k_pos)
 
             # Other parameters follow
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
+                                                              cn.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             # Simple averaging to find the slope of the characteristic lines passing through

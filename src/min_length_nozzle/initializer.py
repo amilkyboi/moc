@@ -1,31 +1,26 @@
 # module initializer
 '''
-Initializes the points.
+Initializes the characteristic points into a list.
 '''
 
 from dataclasses import dataclass, field
 
 import constants as cn
 
-def num_noz_pts() -> int:
+def num_pts(is_nozzle: bool) -> int:
     '''
     Series expansion for the total number of characteristic points needed based on the selected
     number of characteristic lines.
+
+    Args:
+        is_nozzle (bool): True for nozzle, False for fan
 
     Returns:
         int: number of characteristic points
     '''
 
-    return int(cn.N_LINES + cn.N_LINES * 0.5 * (cn.N_LINES + 1))
-
-def num_fan_pts() -> int:
-    '''
-    Series expansion for the total number of characteristic points needed based on the selected
-    number of characteristic lines.
-
-    Returns:
-        int: number of characteristic points
-    '''
+    if is_nozzle:
+        return int(cn.N_LINES + cn.N_LINES * 0.5 * (cn.N_LINES + 1))
 
     return int(cn.N_LINES * 0.5 * (cn.N_LINES + 1))
 

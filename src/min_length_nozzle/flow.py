@@ -1,21 +1,34 @@
 # module flow
 '''
-Common flow functions.
+Isentropic flow functions.
 '''
+
+from typing import Callable
 
 import numpy as np
 
-def newton_raphson(func, dfunc, root: float, n_max: int=100, tol: float=1e-11) -> tuple[float, int]:
+def newton_raphson(func: Callable, dfunc: Callable, root: float, n_max: int=100,
+                   tol: float=1e-11) -> tuple[float, int]:
     '''
     Simple implementation of the Newton-Raphson method. Returns the final root guess and the number
     of iterations required.
+
+    Args:
+        func (Callable): function set equal to zero
+        dfunc (Callable): analytical derivative of the function
+        root (float): initial guess for the root
+        n_max (int, optional): maximum number of iterations, defaults to 100
+        tol (float, optional): minimum tolerance between iterations, defaults to 1e-11
+
+    Returns:
+        tuple[float, int]: final root, number of iterations
     '''
 
     i = 0
 
     for i in range(n_max):
-        change = func(root)/dfunc(root)
-        root -= change
+        change = func(root) / dfunc(root)
+        root  -= change
 
         if abs(change) < tol:
             break
@@ -110,3 +123,31 @@ def inverse_prandtl_meyer(gamma: float, pran_ang: float, method: str) -> float:
 
     else:
         raise ValueError('Please enter either newton or composite')
+
+def pressure_ratio(gamma: float, mach_num: float) -> float:
+    '''
+    Calculates the stagnation pressure ratio p/p0.
+
+    Args:
+        gamma (float): ratio of specific heats
+        mach_num (float): Mach number
+
+    Returns:
+        float: calculated area ratio
+    '''
+
+    return (1 + (gamma - 1)/2 * mach_num**2)**(-gamma/(gamma - 1))
+
+def mach_from_pres(gamma: float, pres_ratio: float) -> float:
+    '''
+    Inverse of the above function, calculates the Mach number based on a given pressure ratio.
+
+    Args:
+        gamma (float): ratio of specific heats
+        pres_ratio (float): stagnation pressure ratio
+
+    Returns:
+        float: Mach number
+    '''
+
+    return np.sqrt((2 / (gamma - 1)) * (pres_ratio**(-(gamma - 1) / gamma) - 1))

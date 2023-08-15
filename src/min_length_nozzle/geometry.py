@@ -1,10 +1,32 @@
 # module geometry
 '''
-Geometric calculations.
+Geometric calculations for angles and Cartesian coordinates.
 '''
 
 import numpy as np
 import constants as cn
+
+def angle_divs(angle: float):
+    '''
+    Given a desired final angle, splits said angle into an equal number of divisions depending on
+    the number of characteristic lines selected.
+
+    Args:
+        angle (float): desired final angle [rad]
+
+    Returns:
+        list[float]: list of equally spaced divisions in [rad]
+    '''
+
+    # Find the necessary change in angle for each step
+    d_angle = angle / (cn.N_LINES - 1)
+
+    # Creates a list of angle divisions that begins at zero and ends at the input angle
+    angles = []
+    for i in range(cn.N_LINES):
+        angles.append(d_angle * i)
+
+    return angles
 
 def find_xy(xy_top: list[float], xy_bot: list[float],
             c_neg: float, c_pos: float) -> list[float]:
@@ -33,25 +55,3 @@ def find_xy(xy_top: list[float], xy_bot: list[float],
              np.tan(c_pos)*xy_top[1])/(np.tan(c_neg) - np.tan(c_pos))
 
     return [x_loc, y_loc]
-
-def angle_divs(angle: float):
-    '''
-    Given the maximum expansion angle of the wall downstream of the throat, splits the angle into an
-    n_divs number of equally spaced divisions.
-
-    Args:
-        angle (float): maximum wall angle in [rad]
-
-    Returns:
-        list[float]: list of equally spaced divisions in [rad]
-    '''
-
-    # Find the necessary change in angle for each step
-    d_angle = angle / (cn.N_LINES - 1)
-
-    # Creates a list of angle divisions that begins at zero and ends at the input angle
-    angles = []
-    for i in range(cn.N_LINES):
-        angles.append(d_angle * i)
-
-    return angles

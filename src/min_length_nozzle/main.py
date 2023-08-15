@@ -1,9 +1,25 @@
 # module main
 '''
-Does what it says on the tin.
-'''
+Applies the method of characteristics for the design of a minimum-length supersonic nozzle. The
+methods applied here assume that the flow inside the nozzle is:
+- steady
+- adiabatic
+- two-dimensional
+- irrotational
+- shock-free
+- isentropic
+- supersonic
 
-import numpy as np
+This code assumes a straight vertical sonic line at the nozzle throat and neglects the expansion
+section entirely. Only the straightening section is considered, where the wall angle steadily
+decreases.
+
+Note that the compatibility equations used here are not valid for axisymmetric flow; this tool
+should not be used for axisymmetric nozzle designs.
+
+Requirements:
+    Python 3.7+ (for dataclasses), matplotlib, scienceplots, pandas, numpy
+'''
 
 import initializer as init
 import constants as cn
@@ -16,7 +32,8 @@ def main():
     Runs the program.
     '''
 
-    n_noz_pts = init.num_noz_pts()
+    # Get number of characteristic points that will make up the nozzle section
+    n_noz_pts = init.num_pts(True)
 
     # Initialize the characteristic point with basic known values prior to performing MOC
     char_noz_pts = init.init_noz_pts(n_noz_pts)
@@ -45,7 +62,8 @@ def main():
             x_wall_noz.append(char_noz_pts[i].xy_loc[0])
             y_wall_noz.append(char_noz_pts[i].xy_loc[1])
 
-    n_fan_pts    = init.num_fan_pts()
+    # Same set of initialization and calculation steps for the expansion fan
+    n_fan_pts    = init.num_pts(False)
     char_fan_pts = init.init_fan_pts(n_fan_pts)
     char_fan_pts = fan.method_of_characteristics(char_fan_pts, n_fan_pts, y_wall_noz[-1])
 
@@ -56,33 +74,12 @@ def main():
         x_char_fan.append(char_fan_pts[i].xy_loc[0])
         y_char_fan.append(char_fan_pts[i].xy_loc[1])
 
-    # Area ratio of the final nozzle design, A/A*
-
-    # Since this nozzle design is two-dimensional, the ratio between the height of the last
-    # wall point and the nozzle throat radius can be used as the area ratio
-    calcd_area_ratio = char_noz_pts[-1].xy_loc[1] / cn.RAD_THROAT
-
-    # Ideal area ratio using isentropic relations
-    ideal_area_ratio = (0.5 * (cn.GAMMA + 1))**(-(cn.GAMMA + 1) / (2 * (cn.GAMMA - 1))) * (1/cn.EXIT_MACH) * \
-                       (1 + 0.5 * (cn.GAMMA - 1) * cn.EXIT_MACH**2)**((cn.GAMMA + 1) / (2 * (cn.GAMMA - 1)))
-
-    # Percent difference in area ratios
-    percent_error = 100 * np.abs(ideal_area_ratio - calcd_area_ratio) / \
-                   (0.5 * (ideal_area_ratio + calcd_area_ratio))
-
-    if cn.INFO:
-        print('OUTPUT:\n')
-        print(f'Exit Mach Number: {char_noz_pts[-1].mach_num}')
-        print(f'Ideal A/A*: {ideal_area_ratio}')
-        print(f'Calculated A/A*: {calcd_area_ratio}')
-        print(f'Percent Error: {percent_error}')
-
     if cn.SAVE:
         out.data(x_wall_noz, y_wall_noz)
 
-    if cn.PLOT_NOZ:
-        out.plot((x_wall_noz, y_wall_noz), (x_char_noz, y_char_noz), calcd_area_ratio, \
-                 ideal_area_ratio, percent_error, char_noz_pts, (x_char_fan, y_char_fan), char_fan_pts)
+    if cn.PLOT:
+        out.plot((x_wall_noz, y_wall_noz), (x_char_noz, y_char_noz), (x_char_fan, y_char_fan),
+                 char_noz_pts, char_fan_pts)
 
 if __name__ == '__main__':
     main()

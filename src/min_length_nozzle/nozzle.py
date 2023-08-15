@@ -1,24 +1,6 @@
 # module min_len_nozzle
 '''
-Applies the method of characteristics for the design of a minimum-length supersonic nozzle. The
-methods applied here assume that the flow inside the nozzle is:
-- steady
-- adiabatic
-- two-dimensional
-- irrotational
-- shock-free
-- isentropic
-- supersonic
-
-This code assumes a straight vertical sonic line at the nozzle throat and neglects the expansion
-section entirely. Only the straightening section is considered, where the wall angle steadily
-decreases.
-
-Note that the compatibility equations used here are not valid for axisymmetric flow; this tool
-should not be used for axisymmetric nozzle designs.
-
-Requirements:
-    Python 3.7+ (for dataclasses), matplotlib, scienceplots, pandas, numpy
+Method of characteristics algorithm for the calculation of the nozzle geometry.
 '''
 
 import numpy as np
@@ -37,7 +19,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
         n_points (int): number of characteristic points
 
     Returns:
-        list[float]: list of equally spaced divisions
+        list['CharPoint']: list of characteristic points
     '''
 
     # Find the maximum wall angle in radians
@@ -88,7 +70,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             # divisions starting from index [1]
             char_pts[i].flow_ang = flow_ang_divs[i]
             char_pts[i].pran_ang = flow_ang_divs[i]
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
+                                                              cn.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
@@ -106,7 +89,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc, c_neg, c_pos)
+            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc,
+                                              c_neg, c_pos)
 
         if char_pts[i].on_wall:
             # Only the first wall point falls within the outer loop parameters, so this loop only
@@ -127,7 +111,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc, c_neg, c_pos)
+            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc,
+                                              c_neg, c_pos)
 
     # Remaining points (everything not on the first C+, C- characteristic line pair)
     j = 0
@@ -152,7 +137,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].pran_ang = char_pts[i].k_neg - char_pts[i].flow_ang
 
             # The rest of the flow parameters follow as standard
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
+                                                              cn.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
@@ -182,7 +168,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].pran_ang = 0.5 * (char_pts[i].k_neg - char_pts[i].k_pos)
 
             # Other parameters follow
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
+                                                              cn.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             # Simple averaging to find the slope of the characteristic lines passing through
