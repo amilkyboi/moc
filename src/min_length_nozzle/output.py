@@ -33,6 +33,10 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
     # Use the scienceplots module and a dark theme
     plt.style.use(['science', 'grid', 'dark_background'])
 
+    mydpi = 96
+
+    plt.figure(figsize=(1920/mydpi, 1080/mydpi), dpi=mydpi)
+
     # Lines connecting the top and bottom wall points
     plt.plot(wall_noz_data[0], wall_noz_data[1], 'lightgreen')
     plt.plot(wall_noz_data[0], [-y for y in wall_noz_data[1]], 'lightgreen')
@@ -130,6 +134,7 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
     plt.xlabel('Nozzle Length $x$, [m]')
     plt.ylabel('Nozzle Height $y$, [m]')
     plt.colorbar(label='Mach Number, $M$ [-]')
+    # plt.savefig('figure.png', dpi=mydpi * 2)
     plt.show()
 
 def data(x_data: list[float], y_data: list[float]):
