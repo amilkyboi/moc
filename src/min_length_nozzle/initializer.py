@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 
 import constants as cn
 
-def number_of_points() -> int:
+def num_noz_pts() -> int:
     '''
     Series expansion for the total number of characteristic points needed based on the selected
-    number of characteristic lines
+    number of characteristic lines.
 
     Returns:
         int: number of characteristic points
@@ -18,7 +18,18 @@ def number_of_points() -> int:
 
     return int(cn.N_LINES + cn.N_LINES * 0.5 * (cn.N_LINES + 1))
 
-def initialize_points(n_points: int) -> list['CharPoint']:
+def num_fan_pts() -> int:
+    '''
+    Series expansion for the total number of characteristic points needed based on the selected
+    number of characteristic lines.
+
+    Returns:
+        int: number of characteristic points
+    '''
+
+    return int(cn.N_LINES * 0.5 * (cn.N_LINES + 1))
+
+def init_noz_pts(n_points: int) -> list['CharPoint']:
     '''
     Initializes all points and adds an internal index attribute. Also finds and marks the points
     that lie on the wall and those that lie on the centerline.
@@ -81,6 +92,42 @@ def initialize_points(n_points: int) -> list['CharPoint']:
                 char_pts[i].on_cent   = True
                 char_pts[i].flow_ang  = 0
                 char_pts[i].xy_loc[1] = 0
+
+    return char_pts
+
+def init_fan_pts(n_points: int) -> list['CharPoint']:
+    '''
+    Initializes all points and adds an internal index attribute. Also finds and marks the points
+    that lie on the centerline.
+
+    Args:
+        n_points (int): number of characteristic points
+
+    Returns:
+        list['CharPoint']: list of characteristic point objects
+    '''
+
+    # Array for storing the list of points, note that each point is an object
+    char_pts = []
+
+    j = 1
+    k = cn.N_LINES
+
+    # Since the indexing in literature begins at 1 instead of zero, the internal idx attribute of
+    # each point will reflect this, hence why this loop begins at 1 instead of 0
+    for i in range(1, n_points + 1):
+        # Create an object for each point and set the index accordingly
+        point = CharPoint(idx=i)
+
+        # Mark centerline points
+        if i == j:
+            point.on_cent = True
+
+            j += k
+            k -= 1
+
+        # Add each point object to the array
+        char_pts.append(point)
 
     return char_pts
 

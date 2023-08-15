@@ -5,13 +5,14 @@ Characteristic lines.
 
 import constants as cn
 
-def find_rght_chars(num: int) -> list[int]:
+def find_rght_chars(num: int, nozzle: bool) -> list[int]:
     '''
     Finds the indices of the points that lie on each right-running characteristic by finding the
     triangular sequence of the input number.
 
     Args:
         num (int): characteristic point index
+        nozzle (bool): True if nozzle, False if expansion fan
 
     Returns:
         list[int]: triangular sequence corresponding to the index of the input point
@@ -19,7 +20,10 @@ def find_rght_chars(num: int) -> list[int]:
 
     sequence  = []
     start     = num
-    increment = cn.N_LINES
+    if nozzle:
+        increment = cn.N_LINES
+    else:
+        increment = cn.N_LINES - 1
 
     for _ in range(num):
         sequence.append(start)

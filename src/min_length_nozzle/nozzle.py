@@ -24,10 +24,8 @@ Requirements:
 import numpy as np
 
 from initializer import CharPoint
-import initializer as init
 import geometry as geom
 import constants as cn
-import output as out
 import flow
 
 def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> list['CharPoint']:
@@ -224,68 +222,3 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             j += 1
 
     return char_pts
-
-def main():
-    '''
-    Runs the program.
-    '''
-
-    n_points = init.number_of_points()
-
-    # Initialize the characteristic point with basic known values prior to performing MOC
-    char_pts = init.initialize_points(n_points)
-
-    # Perform MOC and mutate the characteristic points accordingly
-    char_pts = method_of_characteristics(char_pts, n_points)
-
-    # Since point (a), the point at the sharp throat of the nozzle, is not actually a characteristic
-    # point, it needs to be added to the wall points manually
-
-    # This is easy since we know the nozzle design is centered at the origin x-wise and begins at
-    # the sharp throat
-    x_wall = [0.0]
-    y_wall = [cn.RAD_THROAT]
-
-    # Add the positions of the points calculated using MOC separately based on if they fall upon the
-    # wall or not
-    x_char = []
-    y_char = []
-    for i in range(0, n_points):
-        if not char_pts[i].on_wall:
-            x_char.append(char_pts[i].xy_loc[0])
-            y_char.append(char_pts[i].xy_loc[1])
-
-        if char_pts[i].on_wall:
-            x_wall.append(char_pts[i].xy_loc[0])
-            y_wall.append(char_pts[i].xy_loc[1])
-
-    # Area ratio of the final nozzle design, A/A*
-
-    # Since this nozzle design is two-dimensional, the ratio between the height of the last
-    # wall point and the nozzle throat radius can be used as the area ratio
-    calcd_area_ratio = char_pts[-1].xy_loc[1] / cn.RAD_THROAT
-
-    # Ideal area ratio using isentropic relations
-    ideal_area_ratio = (0.5 * (cn.GAMMA + 1))**(-(cn.GAMMA + 1) / (2 * (cn.GAMMA - 1))) * (1/cn.EXIT_MACH) * \
-                       (1 + 0.5 * (cn.GAMMA - 1) * cn.EXIT_MACH**2)**((cn.GAMMA + 1) / (2 * (cn.GAMMA - 1)))
-
-    # Percent difference in area ratios
-    percent_error = 100 * np.abs(ideal_area_ratio - calcd_area_ratio) / \
-                   (0.5 * (ideal_area_ratio + calcd_area_ratio))
-
-    if cn.INFO:
-        print('OUTPUT:\n')
-        print(f'Exit Mach Number: {char_pts[-1].mach_num}')
-        print(f'Ideal A/A*: {ideal_area_ratio}')
-        print(f'Calculated A/A*: {calcd_area_ratio}')
-        print(f'Percent Error: {percent_error}')
-
-    if cn.SAVE:
-        out.data(x_wall, y_wall)
-
-    if cn.PLOT:
-        out.plotting((x_wall, y_wall), (x_char, y_char), calcd_area_ratio, \
-                 ideal_area_ratio, percent_error, char_pts)
-
-if __name__ == '__main__':
-    main()
