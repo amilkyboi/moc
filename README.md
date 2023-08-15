@@ -1,8 +1,8 @@
 # moc
 
-> *Last Updated: 8 August 2023*
+> *Last Updated: 15 August 2023*
 
-A collection of algorithms that implement the method of characteristics (MOC) for two-dimensional supersonic nozzle design in Python.
+An implementation of the method of characteristics for supersonic nozzle design in Python.
 
 ## Roadmap
 
