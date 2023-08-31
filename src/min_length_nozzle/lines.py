@@ -3,7 +3,7 @@
 Functions to find the lists of points that lie on the left- and right-running characteristic lines.
 '''
 
-import constants as cn
+import input as inp
 
 def find_rght_chars(num: int, is_nozzle: bool) -> list[int]:
     '''
@@ -22,9 +22,9 @@ def find_rght_chars(num: int, is_nozzle: bool) -> list[int]:
     start     = num
 
     if is_nozzle:
-        increment = cn.N_LINES
+        increment = inp.N_LINES
     else:
-        increment = cn.N_LINES - 1
+        increment = inp.N_LINES - 1
 
     for _ in range(num):
         sequence.append(start)

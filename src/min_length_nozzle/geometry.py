@@ -4,7 +4,7 @@ Geometric calculations for angles and Cartesian coordinates.
 '''
 
 import numpy as np
-import constants as cn
+import input as inp
 
 def angle_divs(angle: float):
     '''
@@ -19,11 +19,11 @@ def angle_divs(angle: float):
     '''
 
     # Find the necessary change in angle for each step
-    d_angle = angle / (cn.N_LINES - 1)
+    d_angle = angle / (inp.N_LINES - 1)
 
     # Creates a list of angle divisions that begins at zero and ends at the input angle
     angles = []
-    for i in range(cn.N_LINES):
+    for i in range(inp.N_LINES):
         angles.append(d_angle * i)
 
     return angles

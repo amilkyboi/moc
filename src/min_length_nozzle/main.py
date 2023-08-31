@@ -22,8 +22,8 @@ Requirements:
 '''
 
 import initializer as init
-import constants as cn
 import output as out
+import input as inp
 import nozzle
 import fan
 
@@ -47,7 +47,7 @@ def main():
     # This is easy since we know the nozzle design is centered at the origin x-wise and begins at
     # the sharp throat
     x_wall_noz = [0.0]
-    y_wall_noz = [cn.RAD_THROAT]
+    y_wall_noz = [inp.RAD_THROAT]
 
     # Add the positions of the points calculated using MOC separately based on if they fall upon the
     # wall or not
@@ -74,10 +74,10 @@ def main():
         x_char_fan.append(char_fan_pts[i].xy_loc[0])
         y_char_fan.append(char_fan_pts[i].xy_loc[1])
 
-    if cn.SAVE:
+    if inp.SAVE:
         out.data(x_wall_noz, y_wall_noz)
 
-    if cn.PLOT:
+    if inp.PLOT:
         out.plot((x_wall_noz, y_wall_noz), (x_char_noz, y_char_noz), (x_char_fan, y_char_fan),
                  char_noz_pts, char_fan_pts)
 

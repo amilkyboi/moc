@@ -7,7 +7,7 @@ import numpy as np
 
 from initializer import CharPoint
 import geometry as geom
-import constants as cn
+import input as inp
 import flow
 
 def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
@@ -25,14 +25,14 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
         list['CharPoint']: list of characteristic points
     '''
 
-    exit_pressure_ratio = flow.pressure_ratio(cn.GAMMA, cn.EXIT_MACH)
+    exit_pressure_ratio = flow.pressure_ratio(inp.GAMMA, inp.EXIT_MACH)
 
-    back_pressure_ratio = cn.BACK_PRES / cn.EXIT_PRES * exit_pressure_ratio
+    back_pressure_ratio = inp.BACK_PRES / inp.EXIT_PRES * exit_pressure_ratio
 
-    back_mach = flow.mach_from_pres(cn.GAMMA, back_pressure_ratio)
+    back_mach = flow.mach_from_pres(inp.GAMMA, back_pressure_ratio)
 
-    nu_3 = flow.prandtl_meyer(cn.GAMMA, back_mach)
-    nu_1 = flow.prandtl_meyer(cn.GAMMA, cn.EXIT_MACH)
+    nu_3 = flow.prandtl_meyer(inp.GAMMA, back_mach)
+    nu_1 = flow.prandtl_meyer(inp.GAMMA, inp.EXIT_MACH)
 
     theta_3 = nu_3 - nu_1
 
@@ -42,8 +42,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
     x_a = 0.0
 
     char_pts[0].flow_ang = 0.0
-    char_pts[0].pran_ang = flow.prandtl_meyer(cn.GAMMA, cn.EXIT_MACH)
-    char_pts[0].mach_num = cn.EXIT_MACH
+    char_pts[0].pran_ang = flow.prandtl_meyer(inp.GAMMA, inp.EXIT_MACH)
+    char_pts[0].mach_num = inp.EXIT_MACH
     char_pts[0].mach_ang = flow.mach_angle(char_pts[0].mach_num)
 
     # The slope of the characteristic line coming in to point 1 relative to the centerline is the
@@ -56,7 +56,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
     char_pts[0].k_neg = char_pts[0].flow_ang + char_pts[0].pran_ang
     char_pts[0].k_pos = char_pts[0].flow_ang - char_pts[0].pran_ang
 
-    for i in range(1, cn.N_LINES):
+    for i in range(1, inp.N_LINES):
         # Previous point
         prv_pt = i - 1
 
@@ -64,7 +64,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
         # divisions starting from index [1]
         char_pts[i].flow_ang = flow_ang_divs[i]
         char_pts[i].pran_ang = flow_ang_divs[i] + char_pts[0].pran_ang
-        char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang, cn.METHOD)
+        char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang, inp.METHOD)
         char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
         char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
@@ -86,8 +86,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
 
     # Remaining points (everything not on the first C+, C- characteristic line pair)
     j = 0
-    k = cn.N_LINES
-    for i in range(cn.N_LINES, n_points):
+    k = inp.N_LINES
+    for i in range(inp.N_LINES, n_points):
         # Previous point
         prv_pt = i - 1
         # Previous point that lies on the centerline (only used for centerline point calculations)
@@ -109,8 +109,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
             char_pts[i].pran_ang = char_pts[i].k_neg - char_pts[i].flow_ang
 
             # The rest of the flow parameters follow as standard
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
-                                                              cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang,
+                                                              inp.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
@@ -140,8 +140,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int,
             char_pts[i].pran_ang = 0.5 * (char_pts[i].k_neg - char_pts[i].k_pos)
 
             # Other parameters follow
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
-                                                              cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang,
+                                                              inp.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             # Simple averaging to find the slope of the characteristic lines passing through

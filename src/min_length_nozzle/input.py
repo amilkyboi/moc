@@ -1,4 +1,4 @@
-# module constants
+# module input
 '''
 Nozzle design parameters and various other options.
 '''

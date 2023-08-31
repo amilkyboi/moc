@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 from initializer import CharPoint
-import constants as cn
+import input as inp
 import lines
 
 def plot(wall_noz_data: tuple[list[float], list[float]],
@@ -33,12 +33,12 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
 
     # Since this nozzle design is two-dimensional, the ratio between the height of the last
     # wall point and the nozzle throat radius can be used as the area ratio
-    calcd_area_ratio = char_noz_pts[-1].xy_loc[1] / cn.RAD_THROAT
+    calcd_area_ratio = char_noz_pts[-1].xy_loc[1] / inp.RAD_THROAT
 
     # Ideal area ratio using isentropic relations
-    ideal_area_ratio = (0.5 * (cn.GAMMA + 1))**(-(cn.GAMMA + 1) / (2 * (cn.GAMMA - 1))) * \
-                       (1/cn.EXIT_MACH) * (1 + 0.5 * (cn.GAMMA - 1) * cn.EXIT_MACH**2) \
-                        **((cn.GAMMA + 1) / (2 * (cn.GAMMA - 1)))
+    ideal_area_ratio = (0.5 * (inp.GAMMA + 1))**(-(inp.GAMMA + 1) / (2 * (inp.GAMMA - 1))) * \
+                       (1/inp.EXIT_MACH) * (1 + 0.5 * (inp.GAMMA - 1) * inp.EXIT_MACH**2) \
+                        **((inp.GAMMA + 1) / (2 * (inp.GAMMA - 1)))
 
     # Percent difference in area ratios
     percent_error = 100 * np.abs(ideal_area_ratio - calcd_area_ratio) / \
@@ -49,7 +49,7 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
 
     mydpi = 96
 
-    plt.figure(figsize=(cn.RES[0]/mydpi, cn.RES[1]/mydpi), dpi=mydpi)
+    plt.figure(figsize=(inp.RES[0]/mydpi, inp.RES[1]/mydpi), dpi=mydpi)
 
     # NOZZLE ---------------------------------------------------------------------------------------
 
@@ -64,8 +64,8 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
     plt.scatter(char_noz_data[0], char_noz_data[1], facecolors='none', edgecolors='w')
 
     # Store the indices of the points that lie on the characteristics
-    rght_chars = [lines.find_rght_chars(num, True) for num in range(2, cn.N_LINES + 1)]
-    left_chars =  lines.find_left_chars(cn.N_LINES + 1)
+    rght_chars = [lines.find_rght_chars(num, True) for num in range(2, inp.N_LINES + 1)]
+    left_chars =  lines.find_left_chars(inp.N_LINES + 1)
 
     # Plot left-running characteristic lines
     for i in range(len(char_noz_pts) - 1):
@@ -85,8 +85,8 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
                           char_noz_pts[vals[j+1] - 1].xy_loc[1]], 'w')
 
     # Plot lines that emanate from the throat to the first set of points
-    for i in range(cn.N_LINES):
-        plt.plot([0.0, char_noz_pts[i].xy_loc[0]], [cn.RAD_THROAT, char_noz_pts[i].xy_loc[1]], 'w')
+    for i in range(inp.N_LINES):
+        plt.plot([0.0, char_noz_pts[i].xy_loc[0]], [inp.RAD_THROAT, char_noz_pts[i].xy_loc[1]], 'w')
 
     # EXPANSION FAN --------------------------------------------------------------------------------
 
@@ -96,8 +96,8 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
                 char_fan_data[1], facecolors='none', edgecolors='lightblue')
 
     # Store the indices of the points that lie on the characteristics
-    rght_chars = [lines.find_rght_chars(num, False) for num in range(2, cn.N_LINES + 1)]
-    left_chars = lines.find_left_chars(cn.N_LINES)
+    rght_chars = [lines.find_rght_chars(num, False) for num in range(2, inp.N_LINES + 1)]
+    left_chars = lines.find_left_chars(inp.N_LINES)
 
     # Plot left-running characteristic lines
     for i in range(len(char_fan_pts) - 1):
@@ -119,7 +119,7 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
                           char_fan_pts[vals[j+1] - 1].xy_loc[1]], 'lightblue')
 
     # Plot lines that emanate from the throat to the first set of points
-    for i in range(cn.N_LINES):
+    for i in range(inp.N_LINES):
         plt.plot([wall_noz_data[0][-1], char_fan_pts[i].xy_loc[0] + wall_noz_data[0][-1]],
                  [wall_noz_data[1][-1], char_fan_pts[i].xy_loc[1]], 'lightblue')
 
@@ -143,15 +143,15 @@ def plot(wall_noz_data: tuple[list[float], list[float]],
     # each (x, y) mesh location would not have an assigned Mach number
     z_mesh = griddata((x_data, y_data), [c.mach_num for c in char_pts], (x_mesh, y_mesh))
 
-    plt.contourf(x_mesh, -y_mesh, z_mesh, cmap='magma', levels=cn.N_LINES)
+    plt.contourf(x_mesh, -y_mesh, z_mesh, cmap='magma', levels=inp.N_LINES)
 
     # Show final design information
     plt.axis('equal')
-    plt.title(f'Input: $M_\\mathrm{{e}}={cn.EXIT_MACH}$, $\\gamma={cn.GAMMA}$, \
-                $N_\\mathrm{{lines}}={cn.N_LINES}$, $r_\\mathrm{{t}}={cn.RAD_THROAT}$ \n \
+    plt.title(f'Input: $M_\\mathrm{{e}}={inp.EXIT_MACH}$, $\\gamma={inp.GAMMA}$, \
+                $N_\\mathrm{{lines}}={inp.N_LINES}$, $r_\\mathrm{{t}}={inp.RAD_THROAT}$ \n \
                 Exit Mach Number: {char_noz_pts[-1].mach_num}, \
-                Fan Mach Number: {char_fan_pts[-1].mach_num}, Exit Pressure: {cn.EXIT_PRES} kPa, \
-                Back Pressure: {cn.BACK_PRES} kPa \n \
+                Fan Mach Number: {char_fan_pts[-1].mach_num}, Exit Pressure: {inp.EXIT_PRES} kPa, \
+                Back Pressure: {inp.BACK_PRES} kPa \n \
                 Calculated $A/A^*={calcd_area_ratio}$, Ideal $A/A^*={ideal_area_ratio}$, \
                 Error: {percent_error}\\%')
     plt.xlabel('Nozzle Length $x$, [m]')
@@ -171,4 +171,4 @@ def data(x_data: list[float], y_data: list[float]):
 
     points = pd.DataFrame(np.array([x_data, y_data]).T, columns=['x', 'y'])
 
-    points.to_csv(cn.DATA_PATH, index=False)
+    points.to_csv(inp.DATA_PATH, index=False)

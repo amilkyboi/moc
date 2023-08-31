@@ -7,7 +7,7 @@ import numpy as np
 
 from initializer import CharPoint
 import geometry as geom
-import constants as cn
+import input as inp
 import flow
 
 def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> list['CharPoint']:
@@ -23,7 +23,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     '''
 
     # Find the maximum wall angle in radians
-    max_wall_ang = 0.5 * flow.prandtl_meyer(cn.GAMMA, cn.EXIT_MACH)
+    max_wall_ang = 0.5 * flow.prandtl_meyer(inp.GAMMA, inp.EXIT_MACH)
 
     # Get the list of angle divisions and the division size
     flow_ang_divs = geom.angle_divs(max_wall_ang)
@@ -52,14 +52,14 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
     # Mach angle minus the flow angle
 
     # Using x = y / tan(angle) the position of the first point can be found
-    char_pts[0].xy_loc = [cn.RAD_THROAT / (np.tan(char_pts[0].mach_ang - char_pts[0].flow_ang)), 0]
+    char_pts[0].xy_loc = [inp.RAD_THROAT / (np.tan(char_pts[0].mach_ang - char_pts[0].flow_ang)), 0]
 
     # Keep track of Riemann invariants
     char_pts[0].k_neg = char_pts[0].flow_ang + char_pts[0].pran_ang
     char_pts[0].k_pos = char_pts[0].flow_ang - char_pts[0].pran_ang
 
     # Point (2) through point (cn.N_LINES + 1) (a.k.a. the first wall point)
-    for i in range(1, cn.N_LINES + 1):
+    for i in range(1, inp.N_LINES + 1):
         # Previous point
         prv_pt = i - 1
 
@@ -70,8 +70,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             # divisions starting from index [1]
             char_pts[i].flow_ang = flow_ang_divs[i]
             char_pts[i].pran_ang = flow_ang_divs[i]
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
-                                                              cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang,
+                                                              inp.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_neg = char_pts[i].flow_ang + char_pts[i].pran_ang
@@ -89,7 +89,7 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc,
+            char_pts[i].xy_loc = geom.find_xy([x_a, inp.RAD_THROAT], char_pts[prv_pt].xy_loc,
                                               c_neg, c_pos)
 
         if char_pts[i].on_wall:
@@ -111,18 +111,18 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             c_pos = 0.5 * (char_pts[prv_pt].flow_ang + char_pts[prv_pt].mach_ang + \
                            char_pts[i].flow_ang + char_pts[i].mach_ang)
 
-            char_pts[i].xy_loc = geom.find_xy([x_a, cn.RAD_THROAT], char_pts[prv_pt].xy_loc,
+            char_pts[i].xy_loc = geom.find_xy([x_a, inp.RAD_THROAT], char_pts[prv_pt].xy_loc,
                                               c_neg, c_pos)
 
     # Remaining points (everything not on the first C+, C- characteristic line pair)
     j = 0
-    for i in range(cn.N_LINES + 1, n_points):
+    for i in range(inp.N_LINES + 1, n_points):
         # Previous point
         prv_pt = i - 1
         # Previous point vertically above the current point (y_prev > y_curr, x_prev < x_curr)
-        top_pt = i - (cn.N_LINES - j)
+        top_pt = i - (inp.N_LINES - j)
         # Previous point that lies on the centerline (only used for centerline point calculations)
-        cnt_pt = i - (cn.N_LINES - j) - 1
+        cnt_pt = i - (inp.N_LINES - j) - 1
 
         if char_pts[i].on_cent:
             # For centerline points, we know the K- Riemann invariant is the same as the previous
@@ -137,8 +137,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].pran_ang = char_pts[i].k_neg - char_pts[i].flow_ang
 
             # The rest of the flow parameters follow as standard
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
-                                                              cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang,
+                                                              inp.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             char_pts[i].k_pos = char_pts[i].flow_ang - char_pts[i].pran_ang
@@ -168,8 +168,8 @@ def method_of_characteristics(char_pts: list['CharPoint'], n_points: int) -> lis
             char_pts[i].pran_ang = 0.5 * (char_pts[i].k_neg - char_pts[i].k_pos)
 
             # Other parameters follow
-            char_pts[i].mach_num = flow.inverse_prandtl_meyer(cn.GAMMA, char_pts[i].pran_ang,
-                                                              cn.METHOD)
+            char_pts[i].mach_num = flow.inverse_prandtl_meyer(inp.GAMMA, char_pts[i].pran_ang,
+                                                              inp.METHOD)
             char_pts[i].mach_ang = flow.mach_angle(char_pts[i].mach_num)
 
             # Simple averaging to find the slope of the characteristic lines passing through

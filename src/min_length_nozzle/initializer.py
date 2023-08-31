@@ -5,7 +5,7 @@ Initializes the characteristic points into a list.
 
 from dataclasses import dataclass, field
 
-import constants as cn
+import input as inp
 
 def num_pts(is_nozzle: bool) -> int:
     '''
@@ -20,9 +20,9 @@ def num_pts(is_nozzle: bool) -> int:
     '''
 
     if is_nozzle:
-        return int(cn.N_LINES + cn.N_LINES * 0.5 * (cn.N_LINES + 1))
+        return int(inp.N_LINES + inp.N_LINES * 0.5 * (inp.N_LINES + 1))
 
-    return int(cn.N_LINES * 0.5 * (cn.N_LINES + 1))
+    return int(inp.N_LINES * 0.5 * (inp.N_LINES + 1))
 
 def init_noz_pts(n_points: int) -> list['CharPoint']:
     '''
@@ -41,7 +41,7 @@ def init_noz_pts(n_points: int) -> list['CharPoint']:
 
     # The number of points that lie along the first C+ left-running characteristic line is equal to
     # 1 + cn.N_LINES
-    j = 1 + cn.N_LINES
+    j = 1 + inp.N_LINES
 
     # This is a counter that will increment by one each time a wall point is encountered, see the
     # loop below for details on numbering
@@ -65,7 +65,7 @@ def init_noz_pts(n_points: int) -> list['CharPoint']:
             # Note that the change from one to the next decreases by one for each wall point
             # increment
             k += 1
-            j += cn.N_LINES - k
+            j += inp.N_LINES - k
 
         # Add each point object to the array
         char_pts.append(point)
@@ -106,7 +106,7 @@ def init_fan_pts(n_points: int) -> list['CharPoint']:
     char_pts = []
 
     j = 1
-    k = cn.N_LINES
+    k = inp.N_LINES
 
     # Since the indexing in literature begins at 1 instead of zero, the internal idx attribute of
     # each point will reflect this, hence why this loop begins at 1 instead of 0
